@@ -1,11 +1,5 @@
-// adapted from https://github.com/OpenZeppelin/zeppelin-solidity/blob/master/test/helpers/expectThrow.js
-
-const INVALID_OPCODE = 'invalid opcode'
-const OUT_OF_GAS = 'out of gas'
-const REVERT = 'revert'
-
 /**
- *  assert that a promise throws either an invalidOpcode, outOfGas, or revert error.
+ *  assert that a an error expecting a specific number of arguments is thrown.
  *  @param promise — The promise to test.
  */
 const assertExpectedArguments = count => async promise => {
