@@ -1,0 +1,10 @@
+{
+  "extends": "default",
+  "rules": {
+    "compiler-fixed": false,
+    "indent": ["error", 4],
+    "quotes": ["error", "single"],
+    "max-line-length": ["error", 120],
+    "contract-name-camelcase": ["warn"]
+  }
+}
