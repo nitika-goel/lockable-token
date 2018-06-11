@@ -8,9 +8,13 @@ contract LockableToken {
     using SafeMath for uint256;
 
     /**
-     * @dev Number of activities for which a token can be locked
+     * @dev Utilities for which a token can be locked
      */
-    uint256 public lockedFor;
+    bytes32[] public locked_for;
+    /**
+     * @dev Ability to fetch whether a given utility is active for locking
+     */
+    mapping(bytes32=>bool) public locking_active;
 
     struct lockToken {
         uint256 amount;
@@ -21,17 +25,17 @@ contract LockableToken {
      * @dev Holds number & validity of tokens locked for a given purpose for
      *      a given member address
      */
-    mapping(address => mapping(uint256 => lockToken[])) public locked;
+    mapping(address => mapping(bytes32 => lockToken[])) public locked;
 
     mapping (address => mapping (address => uint256)) internal allowed;
 
     mapping(address => uint256) public balances;
 
-    uint256 public totalSupply_;
+    uint256 totalSupply_;
 
     event Lock(
         address indexed _of,
-        uint256 indexed _for,
+        bytes32 indexed _for,
         uint256 _amount,
         uint256 _validity
     );
@@ -44,12 +48,16 @@ contract LockableToken {
         uint256 value
     );
 
-    constructor(uint256 _supply, uint256 _lockedFor) public {
-        require(_supply != 0);
-        require(_lockedFor != 0);
+    constructor(uint256 _supply) public {
+        require(_supply != 0);        
         totalSupply_ = _supply;
         balances[msg.sender] = _supply;
-        lockedFor = _lockedFor;
+        //Utility - Claims Assesssment
+        locked_for.push("CA");
+        locking_active["CA"]=true;
+        //Utility  - Governance
+        locked_for.push("GOV");
+        locking_active["GOV"]=true;
     }
 
     /**
@@ -60,15 +68,15 @@ contract LockableToken {
      * @param _for The purpose to query the lock tokens for
      * @param _time The timestamp to query the lock tokens for
      */
-    function tokensLocked(address _of, uint256 _for, uint256 _time)
+    function tokensLocked(address _of, bytes32 _for, uint256 _time)
         public
         view
         returns (uint256 amount)
     {
-        for (uint256 i=0; i < locked[_of][_for].length; i++) {
-            if (locked[_of][_for][i].validity > _time) {
-                amount += locked[_of][_for][i].amount;
-            }
+        for(uint256 i=0;i<locked[_of][_for].length;i++)
+        {
+            if(locked[_of][_for][i].validity>_time)
+                amount+=locked[_of][_for][i].amount;
         }
     }
 
@@ -82,8 +90,8 @@ contract LockableToken {
         returns (uint256 amount)
     {
         uint256 lockedAmount = 0;
-        for (uint256 i=0; i < lockedFor; i++) {
-            lockedAmount += tokensLocked(_of, i, block.timestamp);
+        for (uint256 i=0; i < locked_for.length; i++) {
+            lockedAmount += tokensLocked(_of,locked_for[i], block.timestamp);
         }
         amount = balances[_of].sub(lockedAmount);
     }
@@ -95,12 +103,12 @@ contract LockableToken {
      * @param _amount Number of tokens to be locked
      * @param _time Lock time in seconds
      */
-    function lock(uint256 _for, uint256 _amount, uint256 _time)
+    function lock(bytes32 _for, uint256 _amount, uint256 _time)
         public
     {
         uint256 validUntil=block.timestamp.add(_time);
         require(_amount <= transferableBalanceOf(msg.sender));
-        require(_for < lockedFor);
+        require(locking_active[_for]);
         locked[msg.sender][_for].push(lockToken(_amount, validUntil));
         emit Lock(msg.sender, _for, _amount, validUntil);
     }
