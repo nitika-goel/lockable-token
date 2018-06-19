@@ -12,6 +12,7 @@
     "npm": "6.1.0"
   },
   "devDependencies": {
+    "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
     "eslint-config-prettier": "^2.8.0",
     "eslint-config-standard": "^11.0.0-beta.0",
@@ -34,6 +35,7 @@
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "test": "truffle test",
     "test:cov": "solidity-coverage",
+    "coverage": "./node_modules/.bin/solidity-coverage",
     "lint:sol": "solhint contracts/**/*.sol",
     "lint:js": "eslint test/**/*.js"
   },
