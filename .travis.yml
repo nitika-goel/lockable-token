@@ -8,7 +8,7 @@ install:
   - npm install -g ganache-cli
   - npm install
 script:
-  - npm test
+  - npm run test:cov
 before_script:
   - testrpc > /dev/null &
   - sleep 5
