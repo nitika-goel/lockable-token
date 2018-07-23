@@ -9,14 +9,9 @@ contract LockableToken {
     using SafeMath for uint256;
 
     /**
-     * @dev Utilities for which a token can be locked
+     * @dev Utilities for which a user's token have been locked
      */
-    bytes32[] public lock_reason;
-    
-    /**
-     * @dev Ability to fetch whether a given utility is active for locking
-     */
-    mapping(bytes32=>bool) public reason_valid;
+    mapping(address => bytes32[]) public lockReason;
 
     struct lockToken {
         uint256 amount;
@@ -53,12 +48,6 @@ contract LockableToken {
     constructor(uint256 _supply) public {
         totalSupply_ = _supply;
         balances[msg.sender] = _supply;
-        // Utility - Claims Assesssment
-        lock_reason.push('CA');
-        reason_valid['CA'] = true;
-        // Utility  - Governance
-        lock_reason.push('GOV');
-        reason_valid['GOV'] = true;
     }
     
     /**
@@ -76,7 +65,8 @@ contract LockableToken {
         // increaseLockAmount should be used to make any changes
         require(tokensLocked(msg.sender, _reason, block.timestamp) == 0);
         require(_amount <= balanceOf(msg.sender));
-        require(reason_valid[_reason]);
+        if (locked[msg.sender][_reason].amount == 0)
+            lockReason[msg.sender].push(_reason);
         locked[msg.sender][_reason] = lockToken(_amount, validUntil);
         emit Lock(msg.sender, _reason, _amount, validUntil);
     }
@@ -118,7 +108,7 @@ contract LockableToken {
     function extendLock(bytes32 _reason, uint256 _time)
         public
     {
-        require(tokensLocked(msg.sender, _reason, block.timestamp) != 0);
+        require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
         locked[msg.sender][_reason].validity += _time;
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
     }
@@ -131,7 +121,7 @@ contract LockableToken {
     function increaseLockAmount(bytes32 _reason, uint256 _amount)
         public
     {
-        require(tokensLocked(msg.sender, _reason, block.timestamp) != 0);
+        require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
         locked[msg.sender][_reason].amount += _amount;
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
     }
@@ -143,11 +133,25 @@ contract LockableToken {
      */
     function balanceOf(address _owner) public view returns (uint256) {
         uint256 lockedAmount = 0;
-        for (uint256 i = 0; i < lock_reason.length; i++) {
-            lockedAmount += tokensLocked(_owner, lock_reason[i], block.timestamp);
-        }	
+        for (uint256 i = 0; i < lockReason[_owner].length; i++) {
+            lockedAmount += tokensLocked(_owner, lockReason[_owner][i], block.timestamp);
+        }   
         uint256 amount = balances[_owner].sub(lockedAmount);
         return amount;
+    }
+
+    /**
+     * @dev transfer token for a specified address
+     * @param _to The address to transfer to.
+     * @param _value The amount to be transferred.
+     */
+    function transferred(address _to, uint256 _value) public returns (bool) {
+        require(_to != address(0));
+        require(_value <= balanceOf(msg.sender));
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        emit Transfer(msg.sender, _to, _value);
+        return true;
     }
 
     /**
@@ -206,76 +210,10 @@ contract LockableToken {
     }
 
     /**
-     * @dev Increase the amount of tokens that an owner allowed to a spender.
-     *
-     * approve should be called when allowed[_spender] == 0. To increment
-     * allowed value is better to use this function to avoid 2 calls (and wait until
-     * the first transaction is mined)
-     * From MonolithDAO Token.sol
-     * @param _spender The address which will spend the funds.
-     * @param _addedValue The amount of tokens to increase the allowance by.
-     */
-    function increaseApproval(
-        address _spender,
-        uint _addedValue
-    )
-        public
-        returns (bool)
-    {
-        allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
-        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-        return true;
-    }
-
-    /**
-     * @dev Decrease the amount of tokens that an owner allowed to a spender.
-     *
-     * approve should be called when allowed[_spender] == 0. To decrement
-     * allowed value is better to use this function to avoid 2 calls (and wait until
-     * the first transaction is mined)
-     * From MonolithDAO Token.sol
-     * @param _spender The address which will spend the funds.
-     * @param _subtractedValue The amount of tokens to decrease the allowance by.
-     */
-    function decreaseApproval(
-        address _spender,
-        uint _subtractedValue
-    )
-        public
-        returns (bool)
-    {
-        uint oldValue = allowed[msg.sender][_spender];
-        if (_subtractedValue > oldValue) {
-            allowed[msg.sender][_spender] = 0;
-        } else {
-            allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
-        }
-        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-        return true;
-    }
-
-    /**
      * @dev total number of tokens in existence
      */
     function totalSupply() public view returns (uint256) {
         return totalSupply_;
     }
-
-    /**
-     * @dev transfer token for a specified address
-     * @param _to The address to transfer to.
-     * @param _value The amount to be transferred.
-     */
-    function transfer(address _to, uint256 _value) public returns (bool) {
-        require(_to != address(0));
-        require(_value <= balanceOf(msg.sender));
-
-
-        balances[msg.sender] = balances[msg.sender].sub(_value);
-        balances[_to] = balances[_to].add(_value);
-        emit Transfer(msg.sender, _to, _value);
-        return true;
-    }
-
    
 }
