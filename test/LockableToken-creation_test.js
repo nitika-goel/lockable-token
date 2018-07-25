@@ -103,12 +103,17 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       it('transfers tokens less than transferable balance to a valid address', async () => {
         const balance = await token.balanceOf(owner)
         const transferAmount = balance - 1
-        const transferTokens = await token.transfer(receiver, transferAmount, {
+        const { logs } = await token.transfer(receiver, transferAmount, {
           from: owner
         })
         const newSenderBalance = await token.balanceOf(owner)
         const newReceiverBalance = await token.balanceOf(receiver)
         assert.equal(newReceiverBalance.toNumber(), transferAmount)
+        assert.equal(logs.length, 1)
+        assert.equal(logs[0].event, 'Transfer')
+        assert.equal(logs[0].args.from, owner)
+        assert.equal(logs[0].args.to, receiver)
+        assert(logs[0].args.value.eq(transferAmount))
       })
     })
 
@@ -210,15 +215,17 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       it('can transfer tokens from an address less than owners balance', async () => {
         const balance = await token.balanceOf(owner)
         const approveTransfer = await token.approve(spender, balance)
-        try {
-          const actualLockedAmount = await token.transferFrom(
-            owner,
-            receiver,
-            balance.toNumber(),
-            { from: spender }
-          )
-          assert()
-        } catch (err) {}
+        const { logs } = await token.transferFrom(
+          owner,
+          receiver,
+          balance.toNumber(),
+          { from: spender }
+        )
+        assert.equal(logs.length, 1)
+        assert.equal(logs[0].event, 'Transfer')
+        assert.equal(logs[0].args.from, owner)
+        assert.equal(logs[0].args.to, receiver)
+        assert(logs[0].args.value.eq(balance))
       })
     })
   })
