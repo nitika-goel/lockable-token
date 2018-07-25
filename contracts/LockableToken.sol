@@ -59,6 +59,7 @@ contract LockableToken {
      */
     function lock(bytes32 _reason, uint256 _amount, uint256 _time)
         public
+        returns (bool)
     {
         uint256 validUntil=block.timestamp.add(_time);
         // If tokens are already locked, the functions extendLock or
@@ -69,6 +70,7 @@ contract LockableToken {
             lockReason[msg.sender].push(_reason);
         locked[msg.sender][_reason] = lockToken(_amount, validUntil);
         emit Lock(msg.sender, _reason, _amount, validUntil);
+        return true;
     }
 
     /**
@@ -107,10 +109,12 @@ contract LockableToken {
      */
     function extendLock(bytes32 _reason, uint256 _time)
         public
+        returns (bool)
     {
         require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
         locked[msg.sender][_reason].validity += _time;
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
+        return true;
     }
     
     /**
@@ -120,10 +124,12 @@ contract LockableToken {
      */
     function increaseLockAmount(bytes32 _reason, uint256 _amount)
         public
+        returns (bool)
     {
         require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
         locked[msg.sender][_reason].amount += _amount;
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
+        return true;
     }
     
      /**
@@ -145,7 +151,7 @@ contract LockableToken {
      * @param _to The address to transfer to.
      * @param _value The amount to be transferred.
      */
-    function transferred(address _to, uint256 _value) public returns (bool) {
+    function transfer(address _to, uint256 _value) public returns (bool) {
         require(_to != address(0));
         require(_value <= balanceOf(msg.sender));
         balances[msg.sender] = balances[msg.sender].sub(_value);
