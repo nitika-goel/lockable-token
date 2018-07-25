@@ -1,6 +1,5 @@
 const { assertRevert } = require('./assertRevert')
 const LockableToken = artifacts.require('./LockableToken.sol')
-
 const assertThrows = require('./utils/assertThrows')
 const assertExpectedArguments = require('./utils/assertExpectedArguments')
 
@@ -165,32 +164,32 @@ contract('LockableToken', ([owner, receiver, spender]) => {
           { from: owner }
         )
       )
+    })
 
-      it('cannot transfer tokens from an address greater than owners balance', async () => {
-        const balance = await token.balanceOf(owner)
-        const approveTransfer = await token.approve(spender, balance)
+    it('cannot transfer tokens from an address greater than owners balance', async () => {
+      const balance = await token.balanceOf(owner)
+      const approveTransfer = await token.approve(spender, balance)
 
-        await assertRevert(
-          token.transferFrom(owner, receiver, balance.toNumber() + 1, {
-            from: spender
-          })
-        )
-      })
-      it('can transfer tokens from an address less than owners balance', async () => {
-        const balance = await token.balanceOf(owner)
-        const approveTransfer = await token.approve(spender, balance)
-        const { logs } = await token.transferFrom(
-          owner,
-          receiver,
-          balance.toNumber(),
-          { from: spender }
-        )
-        assert.equal(logs.length, 1)
-        assert.equal(logs[0].event, 'Transfer')
-        assert.equal(logs[0].args.from, owner)
-        assert.equal(logs[0].args.to, receiver)
-        assert(logs[0].args.value.eq(balance))
-      })
+      await assertRevert(
+        token.transferFrom(owner, receiver, balance.toNumber() + 1, {
+          from: spender
+        })
+      )
+    })
+    it('can transfer tokens from an address less than owners balance', async () => {
+      const balance = await token.balanceOf(owner)
+      const approveTransfer = await token.approve(spender, balance)
+      const { logs } = await token.transferFrom(
+        owner,
+        receiver,
+        balance.toNumber(),
+        { from: spender }
+      )
+      assert.equal(logs.length, 1)
+      assert.equal(logs[0].event, 'Transfer')
+      assert.equal(logs[0].args.from, owner)
+      assert.equal(logs[0].args.to, receiver)
+      assert(logs[0].args.value.eq(balance))
     })
   })
 })
