@@ -3,15 +3,15 @@ const LockableToken = artifacts.require('./LockableToken.sol')
 const assertThrows = require('./utils/assertThrows')
 const assertExpectedArguments = require('./utils/assertExpectedArguments')
 
-contract('LockableToken', ([owner, spender, receiver]) => {
+contract('LockableToken', ([owner, receiver, spender]) => {
   const supply = 1000
   const lockReason = 'CA'
   const lockReason2 = 'GOV'
   const lockedAmount = 200
   const lockPeriod = 1000
   const lockTimestamp = Number(new Date()) / 1000
-  // const receiver = '0x0758dc7fa551f6E1E5aC48731aD9267fb854CeBB'
-  // const spender = '0xfeCfE7AB8faC5DDaebe5018f702D412A7f9ff246'
+  // const receiver = 0x0758dc7fa551f6E1E5aC48731aD9267fb854CeBB
+  // const spender = 0xfeCfE7AB8faC5DDaebe5018f702D412A7f9ff246
   const approveAmount = 10
 
   context('given invalid params', () => {
@@ -40,18 +40,6 @@ contract('LockableToken', ([owner, spender, receiver]) => {
     it('has the right total balance for the contract owner', async () => {
       const balance = await token.totalBalanceOf(owner)
       assert.equal(balance.toNumber(), supply)
-    })
-
-    it('number of tokens to be locked is less than equal to transferable balance', async () => {
-      const origBalance = await token.balanceOf(owner)
-      try {
-        const invalidLock = await token.lock(
-          lockReason,
-          origBalance + 1,
-          lockPeriod
-        )
-        assert()
-      } catch (err) {}
     })
 
     it('locked tokens are reduced from transferable balance', async () => {
@@ -112,6 +100,16 @@ contract('LockableToken', ([owner, spender, receiver]) => {
         lockValidityExtended[1].toNumber(),
         lockValidityOrig[1].toNumber() + lockPeriod
       )
+      it('transfers tokens less than transferable balance to a valid address', async () => {
+        const balance = await token.balanceOf(owner)
+        const transferAmount = balance - 1
+        const transferTokens = await token.transfer(receiver, transferAmount, {
+          from: owner
+        })
+        const newSenderBalance = await token.balanceOf(owner)
+        const newReceiverBalance = await token.balanceOf(receiver)
+        assert.equal(newReceiverBalance.toNumber(), transferAmount)
+      })
     })
 
     it('cannot increase lock amount for an non-existant lock', async () => {
@@ -151,38 +149,20 @@ contract('LockableToken', ([owner, spender, receiver]) => {
       )
     })
 
-    it('cannot transfer tokens to null address', async () => {
-      const balance = await token.balanceOf(owner)
+    it('cannot transfer tokens to null address', async function() {
       try {
-        const actualLockedAmount = await token.transfer(
-          balance.toNumber(),
-          '0x0000000000000000000000000000000000000000'
-        )
+        await token.transfer(0x0000000000000000000000000000000000000000, 100, {
+          from: owner
+        })
         assert()
       } catch (err) {}
     })
 
     it('cannot transfer tokens greater than transferable balance', async () => {
-      const balance = await token.balanceOf(owner)
       try {
-        const actualLockedAmount = await token.transfer(
-          balance.toNumber() + 1,
-          receiver
-        )
+        const { logs } = await token.transfer(receiver, 599, { from: owner })
         assert()
       } catch (err) {}
-    })
-
-    it('transfers tokens less than transferable balance to a valid address', async () => {
-      const senderBalance = await token.balanceOf(owner)
-      const receiverBalance = await token.balanceOf(receiver)
-      if (balance > 0) {
-        const transferToken = await token.transfer(1, receiver)
-        const newSenderBalance = await token.balanceOf(owner)
-        const newReceiverBalance = await token.balanceOf(receiver)
-        assert.equal(newReceiverBalance, receiverBalance + 1)
-        assert.equal(newSenderBalance, senderBalance - 1)
-      }
     })
 
     it('can approve transfer to a spender', async () => {
@@ -190,43 +170,56 @@ contract('LockableToken', ([owner, spender, receiver]) => {
       const approveTransfer = await token.approve(spender, 1)
       const newAllowance = await token.allowance(owner, spender)
       assert(newAllowance.toNumber(), initialAllowance.toNumber() + 1)
+
+      it('cannot transfer tokens from an address greater than allowance', async () => {
+        try {
+          const actualLockedAmount = await token.transferFrom(
+            owner,
+            receiver,
+            2,
+            { from: spender }
+          )
+          assert()
+        } catch (err) {}
+      })
     })
 
     it('cannot transfer tokens from an address to null address', async () => {
-      const balance = await token.balanceOf(owner)
       try {
-        const actualLockedAmount = await token.transferFrom(
-          balance,
-          '0x0000000000000000000000000000000000000000'
+        await token.transferFrom(
+          owner,
+          0x0000000000000000000000000000000000000000,
+          100,
+          { from: owner }
         )
         assert()
       } catch (err) {}
-    })
-
-    it('cannot transfer tokens from an address greater than allowance', async () => {
-      const transferToken = await token.transfer(approveAmount, spender)
-      const approveTransfer = await token.approve(spender, approveAmount)
-      try {
-        const actualLockedAmount = await token.transferFrom(
-          approveAmount + 1,
-          receiver,
-          { from: spender }
-        )
-        assert()
-      } catch (err) {}
-    })
-
-    it('cannot transfer tokens from an address greater than owners balance', async () => {
-      const balance = await token.balanceOf(owner)
-      const approveTransfer = await token.approve(spender, balance)
-      try {
-        const actualLockedAmount = await token.transferFrom(
-          balance + 1,
-          receiver,
-          { from: spender }
-        )
-        assert()
-      } catch (err) {}
+      it('cannot transfer tokens from an address greater than owners balance', async () => {
+        const balance = await token.balanceOf(owner)
+        const approveTransfer = await token.approve(spender, balance)
+        try {
+          const actualLockedAmount = await token.transferFrom(
+            owner,
+            receiver,
+            balance.toNumber() + 1,
+            { from: spender }
+          )
+          assert()
+        } catch (err) {}
+      })
+      it('can transfer tokens from an address less than owners balance', async () => {
+        const balance = await token.balanceOf(owner)
+        const approveTransfer = await token.approve(spender, balance)
+        try {
+          const actualLockedAmount = await token.transferFrom(
+            owner,
+            receiver,
+            balance.toNumber(),
+            { from: spender }
+          )
+          assert()
+        } catch (err) {}
+      })
     })
   })
 })
