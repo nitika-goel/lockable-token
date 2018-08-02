@@ -9,7 +9,7 @@ contract LockableToken {
     using SafeMath for uint256;
 
     /**
-     * @dev Utilities for which a user's token have been locked
+     * @dev Reasons why a user's tokens have been locked
      */
     mapping(address => bytes32[]) public lockReason;
 
@@ -19,7 +19,7 @@ contract LockableToken {
     }
 
     /**
-     * @dev Holds number & validity of tokens locked for a given purpose for
+     * @dev Holds number & validity of tokens locked for a given reason for
      *      a given member address
      */
     mapping(address => mapping(bytes32 => lockToken)) public locked;
@@ -52,8 +52,8 @@ contract LockableToken {
     
     /**
      * @dev Locks a specified amount of tokens against an address,
-     *      for a specified purpose and time
-     * @param _reason The purpose to lock tokens
+     *      for a specified reason and time
+     * @param _reason The reason to lock tokens
      * @param _amount Number of tokens to be locked
      * @param _time Lock time in seconds
      */
@@ -61,7 +61,7 @@ contract LockableToken {
         public
         returns (bool)
     {
-        uint256 validUntil=block.timestamp.add(_time);
+        uint256 validUntil = block.timestamp.add(_time);
         // If tokens are already locked, the functions extendLock or
         // increaseLockAmount should be used to make any changes
         require(tokensLocked(msg.sender, _reason, block.timestamp) == 0);
@@ -75,10 +75,10 @@ contract LockableToken {
 
     /**
      * @dev Returns tokens locked for a specified address for a
-     *      specified purpose at a specified time
+     *      specified reason at a specified time
      *
      * @param _of The address whose tokens are locked
-     * @param _reason The purpose to query the lock tokens for
+     * @param _reason The reason to query the lock tokens for
      * @param _time The timestamp to query the lock tokens for
      */
     function tokensLocked(address _of, bytes32 _reason, uint256 _time)
@@ -103,8 +103,8 @@ contract LockableToken {
     }    
     
     /**
-     * @dev Extends lock for a specified purpose and time
-     * @param _reason The purpose to lock tokens
+     * @dev Extends lock for a specified reason and time
+     * @param _reason The reason to lock tokens
      * @param _time Lock extension time in seconds
      */
     function extendLock(bytes32 _reason, uint256 _time)
@@ -118,8 +118,8 @@ contract LockableToken {
     }
     
     /**
-     * @dev Increase number of tokens locked for a specified purpose
-     * @param _reason The purpose to lock tokens
+     * @dev Increase number of tokens locked for a specified reason
+     * @param _reason The reason to lock tokens
      * @param _amount Number of tokens to be increased
      */
     function increaseLockAmount(bytes32 _reason, uint256 _amount)

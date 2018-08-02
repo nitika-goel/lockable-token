@@ -5,14 +5,13 @@ const { assertRevert } = require('./utils/assertRevert')
 
 contract('LockableToken', ([owner, receiver, spender]) => {
   const supply = 1000
-  const lockReason =
-    '0x4341000000000000000000000000000000000000000000000000000000000000'
-  const lockReason2 =
-    '0x474f560000000000000000000000000000000000000000000000000000000000'
+  const lockReason = 'GOV'
+  const lockReason2 = 'CLAIM'
   const lockedAmount = 200
   const lockPeriod = 1000
   const lockTimestamp = Number(new Date()) / 1000
   const approveAmount = 10
+  const nullAddress = 0x0000000000000000000000000000000000000000
 
   context('given invalid params', () => {
     it('error if not supplied any params', () =>
@@ -118,7 +117,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
 
     it('cannot transfer tokens to null address', async function() {
       await assertRevert(
-        token.transfer(0x0000000000000000000000000000000000000000, 100, {
+        token.transfer(nullAddress, 100, {
           from: owner
         })
       )
@@ -144,12 +143,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
 
     it('cannot transfer tokens from an address to null address', async () => {
       await assertRevert(
-        token.transferFrom(
-          owner,
-          0x0000000000000000000000000000000000000000,
-          100,
-          { from: owner }
-        )
+        token.transferFrom(owner, nullAddress, 100, { from: owner })
       )
     })
 
