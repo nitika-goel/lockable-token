@@ -2,19 +2,16 @@ pragma solidity ^0.4.24;
 
 
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
+// import './SafeMath.sol';
 
 
 contract LockableToken {
     using SafeMath for uint256;
 
     /**
-     * @dev Utilities for which a token can be locked
+     * @dev Reasons why a user's tokens have been locked
      */
-    bytes32[] public locked_for;
-    /**
-     * @dev Ability to fetch whether a given utility is active for locking
-     */
-    mapping(bytes32=>bool) public locking_active;
+    mapping(address => bytes32[]) public lockReason;
 
     struct lockToken {
         uint256 amount;
@@ -22,20 +19,20 @@ contract LockableToken {
     }
 
     /**
-     * @dev Holds number & validity of tokens locked for a given purpose for
+     * @dev Holds number & validity of tokens locked for a given reason for
      *      a given member address
      */
-    mapping(address => mapping(bytes32 => lockToken[])) public locked;
+    mapping(address => mapping(bytes32 => lockToken)) public locked;
 
     mapping (address => mapping (address => uint256)) internal allowed;
 
-    mapping(address => uint256) public balances;
+    mapping(address => uint256) balances;
 
     uint256 totalSupply_;
 
     event Lock(
         address indexed _of,
-        bytes32 indexed _for,
+        bytes32 indexed _reason,
         uint256 _amount,
         uint256 _validity
     );
@@ -49,68 +46,118 @@ contract LockableToken {
     );
 
     constructor(uint256 _supply) public {
-        require(_supply != 0);        
         totalSupply_ = _supply;
         balances[msg.sender] = _supply;
-        //Utility - Claims Assesssment
-        locked_for.push("CA");
-        locking_active["CA"]=true;
-        //Utility  - Governance
-        locked_for.push("GOV");
-        locking_active["GOV"]=true;
+    }
+    
+    /**
+     * @dev Locks a specified amount of tokens against an address,
+     *      for a specified reason and time
+     * @param _reason The reason to lock tokens
+     * @param _amount Number of tokens to be locked
+     * @param _time Lock time in seconds
+     */
+    function lock(bytes32 _reason, uint256 _amount, uint256 _time)
+        public
+        returns (bool)
+    {
+        uint256 validUntil = block.timestamp.add(_time);
+        // If tokens are already locked, the functions extendLock or
+        // increaseLockAmount should be used to make any changes
+        require(tokensLocked(msg.sender, _reason, block.timestamp) == 0);
+        require(_amount <= balanceOf(msg.sender));
+        if (locked[msg.sender][_reason].amount == 0)
+            lockReason[msg.sender].push(_reason);
+        locked[msg.sender][_reason] = lockToken(_amount, validUntil);
+        emit Lock(msg.sender, _reason, _amount, validUntil);
+        return true;
     }
 
     /**
      * @dev Returns tokens locked for a specified address for a
-     *      specified purpose at a specified time
+     *      specified reason at a specified time
      *
      * @param _of The address whose tokens are locked
-     * @param _for The purpose to query the lock tokens for
+     * @param _reason The reason to query the lock tokens for
      * @param _time The timestamp to query the lock tokens for
      */
-    function tokensLocked(address _of, bytes32 _for, uint256 _time)
+    function tokensLocked(address _of, bytes32 _reason, uint256 _time)
         public
         view
         returns (uint256 amount)
     {
-        for(uint256 i=0;i<locked[_of][_for].length;i++)
-        {
-            if(locked[_of][_for][i].validity>_time)
-                amount+=locked[_of][_for][i].amount;
-        }
+        if (locked[_of][_reason].validity > _time)
+            amount = locked[_of][_reason].amount;
     }
 
     /**
-     * @dev Returns tokens available for transfer for a specified address
-     * @param _of The address to query the the lock tokens of
+     * @dev Returns total tokens held by an address (locked + transferable)
+     * @param _of The address to query the total balance of
      */
-    function transferableBalanceOf(address _of)
+    function totalBalanceOf(address _of)
         public
         view
         returns (uint256 amount)
     {
+        return(balances[_of]);
+    }    
+    
+    /**
+     * @dev Extends lock for a specified reason and time
+     * @param _reason The reason to lock tokens
+     * @param _time Lock extension time in seconds
+     */
+    function extendLock(bytes32 _reason, uint256 _time)
+        public
+        returns (bool)
+    {
+        require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
+        locked[msg.sender][_reason].validity += _time;
+        emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
+        return true;
+    }
+    
+    /**
+     * @dev Increase number of tokens locked for a specified reason
+     * @param _reason The reason to lock tokens
+     * @param _amount Number of tokens to be increased
+     */
+    function increaseLockAmount(bytes32 _reason, uint256 _amount)
+        public
+        returns (bool)
+    {
+        require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
+        locked[msg.sender][_reason].amount += _amount;
+        emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
+        return true;
+    }
+    
+     /**
+     * @dev Gets the balance of the specified address.
+     * @param _owner The address to query the the balance of.
+     * @return An uint256 representing the amount owned by the passed address.
+     */
+    function balanceOf(address _owner) public view returns (uint256) {
         uint256 lockedAmount = 0;
-        for (uint256 i=0; i < locked_for.length; i++) {
-            lockedAmount += tokensLocked(_of,locked_for[i], block.timestamp);
-        }
-        amount = balances[_of].sub(lockedAmount);
+        for (uint256 i = 0; i < lockReason[_owner].length; i++) {
+            lockedAmount += tokensLocked(_owner, lockReason[_owner][i], block.timestamp);
+        }   
+        uint256 amount = balances[_owner].sub(lockedAmount);
+        return amount;
     }
 
     /**
-     * @dev Locks a specified amount of tokens against an address,
-     *      for a specified purpose and time
-     * @param _for The purpose to lock tokens
-     * @param _amount Number of tokens to be locked
-     * @param _time Lock time in seconds
+     * @dev transfer token for a specified address
+     * @param _to The address to transfer to.
+     * @param _value The amount to be transferred.
      */
-    function lock(bytes32 _for, uint256 _amount, uint256 _time)
-        public
-    {
-        uint256 validUntil=block.timestamp.add(_time);
-        require(_amount <= transferableBalanceOf(msg.sender));
-        require(locking_active[_for]);
-        locked[msg.sender][_for].push(lockToken(_amount, validUntil));
-        emit Lock(msg.sender, _for, _amount, validUntil);
+    function transfer(address _to, uint256 _value) public returns (bool) {
+        require(_to != address(0));
+        require(_value <= balanceOf(msg.sender));
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        emit Transfer(msg.sender, _to, _value);
+        return true;
     }
 
     /**
@@ -124,7 +171,7 @@ contract LockableToken {
         returns (bool)
     {
         require(_to != address(0));
-        require(_value <= transferableBalanceOf(_from));
+        require(_value <= balanceOf(_from));
         require(_value <= allowed[_from][msg.sender]);
 
         balances[_from] = balances[_from].sub(_value);
@@ -169,82 +216,10 @@ contract LockableToken {
     }
 
     /**
-     * @dev Increase the amount of tokens that an owner allowed to a spender.
-     *
-     * approve should be called when allowed[_spender] == 0. To increment
-     * allowed value is better to use this function to avoid 2 calls (and wait until
-     * the first transaction is mined)
-     * From MonolithDAO Token.sol
-     * @param _spender The address which will spend the funds.
-     * @param _addedValue The amount of tokens to increase the allowance by.
-     */
-    function increaseApproval(
-        address _spender,
-        uint _addedValue
-    )
-        public
-        returns (bool)
-    {
-        allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
-        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-        return true;
-    }
-
-    /**
-     * @dev Decrease the amount of tokens that an owner allowed to a spender.
-     *
-     * approve should be called when allowed[_spender] == 0. To decrement
-     * allowed value is better to use this function to avoid 2 calls (and wait until
-     * the first transaction is mined)
-     * From MonolithDAO Token.sol
-     * @param _spender The address which will spend the funds.
-     * @param _subtractedValue The amount of tokens to decrease the allowance by.
-     */
-    function decreaseApproval(
-        address _spender,
-        uint _subtractedValue
-    )
-        public
-        returns (bool)
-    {
-        uint oldValue = allowed[msg.sender][_spender];
-        if (_subtractedValue > oldValue) {
-            allowed[msg.sender][_spender] = 0;
-        } else {
-            allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
-        }
-        emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-        return true;
-    }
-
-    /**
      * @dev total number of tokens in existence
      */
     function totalSupply() public view returns (uint256) {
         return totalSupply_;
     }
-
-    /**
-     * @dev transfer token for a specified address
-     * @param _to The address to transfer to.
-     * @param _value The amount to be transferred.
-     */
-    function transfer(address _to, uint256 _value) public returns (bool) {
-        require(_to != address(0));
-        require(_value <= transferableBalanceOf(msg.sender));
-
-        balances[msg.sender] = balances[msg.sender].sub(_value);
-        balances[_to] = balances[_to].add(_value);
-        emit Transfer(msg.sender, _to, _value);
-        return true;
-    }
-
-    /**
-     * @dev Gets the balance of the specified address.
-     * @param _owner The address to query the the balance of.
-     * @return An uint256 representing the amount owned by the passed address.
-     */
-    function balanceOf(address _owner) public view returns (uint256) {
-        return balances[_owner];
-    }
+   
 }
