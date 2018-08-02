@@ -8,76 +8,54 @@ I’ve extended the ERC20 interface with the following enhancements:
 ### Locking of tokens
 ```
 /**
- * @dev Locks a specified amount of tokens against an address, for a specified purpose and time
- * @param _for The purpose of token locking, one application can have more than one utility
- * @param _amount Number of tokens to be locked
- * @param _time Lock time in seconds
- */
-function lock(uint256 _for,uint256 _amount,uint256 _time)
+  * @dev Locks a specified amount of tokens against an address,
+  *      for a specified reason and time
+  * @param _reason The reason to lock tokens
+  * @param _amount Number of tokens to be locked
+  * @param _time Lock time in seconds
+  */
+function lock(bytes32 _reason, uint256 _amount, uint256 _time) public returns (bool)
 ```
 
 ### Fetching number of tokens locked under each utility
 ```
 /**
-   * @dev Returns tokens locked for a specified address, purpose and time
-   * @param _of The address to query the lock tokens of
-   * @param _for The purpose to query the lock tokens for
-   * @param _time The timestamp to query the lock tokens for
-   **/
-   function tokensLocked(address _of,uint256 _for,uint256 _time) view returns (uint256 amount)
+  * @dev Returns tokens locked for a specified address, purpose and time
+  * @param _of The address to query the lock tokens of
+  * @param _reason The reason to query the lock tokens for
+  * @param _time The timestamp to query the lock tokens for
+  **/
+   function tokensLocked(address _of, bytes32 _reason, uint256 _time) view returns (uint256 amount)
 ```
-### Fetching number of tokens available for transfer
+### Fetching number of tokens held by an address
 ```
 /**
-   * @dev Returns tokens available for transfer for a specified address
-   * @param _of The address to query the transferable balance of    
-   **/
-function transferableBalanceOf(address _of)  view returns (uint256 amount)
+  * @dev @dev Returns total tokens held by an address (locked + transferable)
+  * @param _of The address to query the total balance of
+  */
+function totalBalanceOf(address _of)  view returns (uint256 amount)
+```
+### Extending lock period
+```
+/**
+  * @dev Extends lock for a specified reason and time
+  * @param _reason The reason to lock tokens
+  * @param _time Lock extension time in seconds
+  */
+  function extendLock(bytes32 _reason, uint256 _time) public returns (bool)
+```
+### Increasing number of tokens locked
+```
+/**
+  * @dev Increase number of tokens locked for a specified reason
+  * @param _reason The reason to lock tokens
+  * @param _amount Number of tokens to be increased
+  */
+  function increaseLockAmount(bytes32 _reason, uint256 _amount) public returns (bool)
 ```
 ### Lock event recorded in the token contract
-`event Lock(address indexed _of,uint256 indexed _for,uint256 _amount,uint256 _validity)`
+`event Lock(address indexed _of, uint256 indexed _reason, uint256 _amount, uint256 _validity)`
 
-If the above proposal is accepted, the functions `transfer() `and `transferFrom()` of the ERC20 interface should use `transferableBalanceOf()` instead of `balanceOf()` to check if the sender has enough tokens to transfer.
-
-For example:
-
-```
-/**
- * @dev Transfer tokens from one address to another
- * @param _from address The address which you want to send tokens from
- * @param _to address The address which you want to transfer to
- * @param _value uint256 the amount of tokens to be transferred
- */
-function transferFrom(address _from, address _to, uint256 _value)
-    public
-    returns (bool)
-{
-    require(_to != address(0));
-    require(_value <= transferableBalanceOf(_from));
-    require(_value <= allowed[_from][msg.sender]);
-
-    balances[_from] = balances[_from].sub(_value);
-    balances[_to] = balances[_to].add(_value);
-    allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
-    emit Transfer(_from, _to, _value);
-    return true;
-}
-
-/**
- * @dev transfer token for a specified address
- * @param _to The address to transfer to.
- * @param _value The amount to be transferred.
- */
- function transfer(address _to, uint256 _value) public returns (bool) {
-    require(_to != address(0));
-    require(_value <= transferableBalanceOf(msg.sender));
-
-    balances[msg.sender] = balances[msg.sender].sub(_value);
-    balances[_to] = balances[_to].add(_value);
-    emit Transfer(msg.sender, _to, _value);
-    return true;
-}
-```
 
 ## Development
 
