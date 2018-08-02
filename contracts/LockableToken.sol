@@ -91,8 +91,8 @@ contract LockableToken {
     }
 
     /**
-     * @dev Returns tokens available for transfer for a specified address
-     * @param _of The address to query the the lock tokens of
+     * @dev Returns total tokens held by an address (locked + transferable)
+     * @param _of The address to query the total balance of
      */
     function totalBalanceOf(address _of)
         public
