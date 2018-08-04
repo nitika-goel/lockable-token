@@ -1,13 +1,8 @@
 pragma solidity ^0.4.24;
 
+import 'openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
 
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
-// import './SafeMath.sol';
-
-
-contract LockableToken {
-    using SafeMath for uint256;
-
+contract LockableToken is StandardToken {
     /**
      * @dev Reasons why a user's tokens have been locked
      */
@@ -16,6 +11,7 @@ contract LockableToken {
     struct lockToken {
         uint256 amount;
         uint256 validity;
+        bool claimed;
     }
 
     /**
@@ -24,12 +20,6 @@ contract LockableToken {
      */
     mapping(address => mapping(bytes32 => lockToken)) public locked;
 
-    mapping (address => mapping (address => uint256)) internal allowed;
-
-    mapping(address => uint256) balances;
-
-    uint256 totalSupply_;
-
     event Lock(
         address indexed _of,
         bytes32 indexed _reason,
@@ -37,18 +27,14 @@ contract LockableToken {
         uint256 _validity
     );
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
+    /**
+     * @dev Records data of all the tokens unlocked
+     */
+    event Unlocked(
+        address indexed _of,
+        bytes32 indexed _reason,
+        uint256 _amount
     );
-
-    constructor(uint256 _supply) public {
-        totalSupply_ = _supply;
-        balances[msg.sender] = _supply;
-    }
     
     /**
      * @dev Locks a specified amount of tokens against an address,
@@ -65,10 +51,13 @@ contract LockableToken {
         // If tokens are already locked, the functions extendLock or
         // increaseLockAmount should be used to make any changes
         require(tokensLocked(msg.sender, _reason, block.timestamp) == 0);
-        require(_amount <= balanceOf(msg.sender));
+        require(_amount != 0);
+        //require(_amount <= balances[msg.sender]); SafeMath.sub will throw.
         if (locked[msg.sender][_reason].amount == 0)
             lockReason[msg.sender].push(_reason);
-        locked[msg.sender][_reason] = lockToken(_amount, validUntil);
+        balances[msg.sender] = balances[msg.sender].sub(_amount);
+        balances[address(this)] = balances[address(this)].add(_amount);
+        locked[msg.sender][_reason] = lockToken(_amount, validUntil, false);
         emit Lock(msg.sender, _reason, _amount, validUntil);
         return true;
     }
@@ -86,7 +75,7 @@ contract LockableToken {
         view
         returns (uint256 amount)
     {
-        if (locked[_of][_reason].validity > _time)
+        if (locked[_of][_reason].validity > _time || !locked[_of][_reason].claimed)
             amount = locked[_of][_reason].amount;
     }
 
@@ -99,7 +88,12 @@ contract LockableToken {
         view
         returns (uint256 amount)
     {
-        return(balances[_of]);
+        uint256 lockedAmount;
+        for (uint256 i = 0; i < lockReason[_of].length; i++) {
+            lockedAmount += tokensLocked(_of, lockReason[_of][i], block.timestamp);
+        }   
+        amount = balances[_of].add(lockedAmount);
+        return amount;
     }    
     
     /**
@@ -127,99 +121,61 @@ contract LockableToken {
         returns (bool)
     {
         require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
+        balances[msg.sender] = balances[msg.sender].sub(_amount);
+        balances[address(this)] = balances[address(this)].add(_amount);
         locked[msg.sender][_reason].amount += _amount;
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
         return true;
     }
-    
-     /**
-     * @dev Gets the balance of the specified address.
-     * @param _owner The address to query the the balance of.
-     * @return An uint256 representing the amount owned by the passed address.
-     */
-    function balanceOf(address _owner) public view returns (uint256) {
-        uint256 lockedAmount = 0;
-        for (uint256 i = 0; i < lockReason[_owner].length; i++) {
-            lockedAmount += tokensLocked(_owner, lockReason[_owner][i], block.timestamp);
-        }   
-        uint256 amount = balances[_owner].sub(lockedAmount);
-        return amount;
-    }
 
     /**
-     * @dev transfer token for a specified address
-     * @param _to The address to transfer to.
-     * @param _value The amount to be transferred.
+     * @dev Returns unlockable tokens for a specified address for a specified reason
+     * @param _of The address whose tokens are locked
+     * @param _reason The reason to query the lock tokens for
      */
-    function transfer(address _to, uint256 _value) public returns (bool) {
-        require(_to != address(0));
-        require(_value <= balanceOf(msg.sender));
-        balances[msg.sender] = balances[msg.sender].sub(_value);
-        balances[_to] = balances[_to].add(_value);
-        emit Transfer(msg.sender, _to, _value);
-        return true;
-    }
-
-    /**
-     * @dev Transfer tokens from one address to another
-     * @param _from address The address which you want to send tokens from
-     * @param _to address The address which you want to transfer to
-     * @param _value uint256 the amount of tokens to be transferred
-     */
-    function transferFrom(address _from, address _to, uint256 _value)
-        public
-        returns (bool)
-    {
-        require(_to != address(0));
-        require(_value <= balanceOf(_from));
-        require(_value <= allowed[_from][msg.sender]);
-
-        balances[_from] = balances[_from].sub(_value);
-        balances[_to] = balances[_to].add(_value);
-        allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
-        emit Transfer(_from, _to, _value);
-        return true;
-    }
-
-    /**
-     * @dev Approve the passed address to spend the specified amount of tokens
-     *      on behalf of msg.sender.
-     *
-     * Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this
-     * race condition is to first reduce the spender's allowance to 0 and
-     * set the desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * @param _spender The address which will spend the funds.
-     * @param _value The amount of tokens to be spent.
-     */
-    function approve(address _spender, uint256 _value) public returns (bool) {
-        allowed[msg.sender][_spender] = _value;
-        emit Approval(msg.sender, _spender, _value);
-        return true;
-    }
-
-    /**
-     * @dev Function to check the amount of tokens that an owner allowed to a spender.
-     * @param _owner address The address which owns the funds.
-     * @param _spender address The address which will spend the funds.
-     * @return A uint256 specifying the amount of tokens still available for the spender.
-     */
-    function allowance(address _owner, address _spender)
+    function tokensUnlockable(address _of, bytes32 _reason)
         public
         view
-        returns (uint256)
+        returns (uint256 amount)
     {
-        return allowed[_owner][_spender];
+        if (locked[_of][_reason].validity <= now && !locked[_of][_reason].claimed)
+            amount = locked[_of][_reason].amount;
     }
 
     /**
-     * @dev total number of tokens in existence
+     * @dev Unlocks the locked tokens
+     * @param _of Address of person, claiming back the tokens
      */
-    function totalSupply() public view returns (uint256) {
-        return totalSupply_;
+    function unlock(address _of)
+        public
+        returns (uint256 unlockableTokens)
+    {
+        uint lockedTokens;
+        for (uint256 i = 0; i < lockReason[_of].length; i++) {
+            lockedTokens = tokensUnlockable(_of, lockReason[_of][i]);
+            if (lockedTokens > 0) {
+                unlockableTokens += lockedTokens;
+                locked[_of][lockReason[_of][i]].claimed = true;
+                emit Unlocked(_of, lockReason[_of][i], lockedTokens);
+            }
+        }  
+        if(unlockableTokens > 0) {
+            balances[address(this)] = balances[address(this)].sub(unlockableTokens); 
+            balances[_of] = balances[_of].add(unlockableTokens);
+        } 
     }
-   
+
+    /**
+     * @dev gets unlockable tokens of a person
+     * @param _of Address of person, claiming back the tokens
+     */
+    function getUnlockableTokens(address _of)
+        public
+        view
+        returns (uint256 unlockableTokens)
+    {
+        for (uint256 i = 0; i < lockReason[_of].length; i++) {
+            unlockableTokens += tokensUnlockable(_of, lockReason[_of][i]);
+        }  
+    }
 }
