@@ -50,7 +50,7 @@ contract LockableToken is StandardToken {
         uint256 validUntil = block.timestamp.add(_time);
         // If tokens are already locked, the functions extendLock or
         // increaseLockAmount should be used to make any changes
-        require(tokensLocked(msg.sender, _reason, block.timestamp) == 0);
+        require(tokensLocked(msg.sender, _reason) == 0);
         require(_amount != 0);
         //require(_amount <= balances[msg.sender]); SafeMath.sub will throw.
         if (locked[msg.sender][_reason].amount == 0)
@@ -64,18 +64,34 @@ contract LockableToken is StandardToken {
 
     /**
      * @dev Returns tokens locked for a specified address for a
-     *      specified reason at a specified time
+     *      specified reason
+     *
+     * @param _of The address whose tokens are locked
+     * @param _reason The reason to query the lock tokens for
+     */
+    function tokensLocked(address _of, bytes32 _reason)
+        public
+        view
+        returns (uint256 amount)
+    {
+        if (!locked[_of][_reason].claimed)
+            amount = locked[_of][_reason].amount;
+    }
+    
+    /**
+     * @dev Returns tokens locked for a specified address for a
+     *      specified reason at a specific time
      *
      * @param _of The address whose tokens are locked
      * @param _reason The reason to query the lock tokens for
      * @param _time The timestamp to query the lock tokens for
      */
-    function tokensLocked(address _of, bytes32 _reason, uint256 _time)
+    function tokensLockedAtTime(address _of, bytes32 _reason, uint256 _time)
         public
         view
         returns (uint256 amount)
     {
-        if (locked[_of][_reason].validity > _time || !locked[_of][_reason].claimed)
+        if (locked[_of][_reason].validity > _time)
             amount = locked[_of][_reason].amount;
     }
 
@@ -90,7 +106,7 @@ contract LockableToken is StandardToken {
     {
         uint256 lockedAmount;
         for (uint256 i = 0; i < lockReason[_of].length; i++) {
-            lockedAmount += tokensLocked(_of, lockReason[_of][i], block.timestamp);
+            lockedAmount += tokensLocked(_of, lockReason[_of][i]);
         }   
         amount = balances[_of].add(lockedAmount);
         return amount;
@@ -105,7 +121,7 @@ contract LockableToken is StandardToken {
         public
         returns (bool)
     {
-        require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
+        require(tokensLockedAtTime(msg.sender, _reason, block.timestamp) > 0);
         locked[msg.sender][_reason].validity += _time;
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
         return true;
@@ -120,7 +136,7 @@ contract LockableToken is StandardToken {
         public
         returns (bool)
     {
-        require(tokensLocked(msg.sender, _reason, block.timestamp) > 0);
+        require(tokensLockedAtTime(msg.sender, _reason, block.timestamp) > 0);
         balances[msg.sender] = balances[msg.sender].sub(_amount);
         balances[address(this)] = balances[address(this)].add(_amount);
         locked[msg.sender][_reason].amount += _amount;
