@@ -196,13 +196,21 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       const lockValidityExtended = await token.locked(owner, lockReason)
       const balance = await token.balanceOf(owner)
       let unlockableToken = await token.getUnlockableTokens(owner)
-      await increaseTime(lockValidityExtended[1].toNumber() - lockTimestamp)
+      await increaseTime(
+        (lockValidityExtended[1].toNumber() - lockTimestamp) * 2
+      )
       unlockableToken = await token.getUnlockableTokens(owner)
-      assert.equal(unlockableToken, lockValidityExtended[0].toNumber())
+      assert.equal(
+        unlockableToken.toNumber(),
+        lockValidityExtended[0].toNumber()
+      )
       await token.unlock(owner)
       unlockableToken = await token.getUnlockableTokens(owner)
       assert.equal(unlockableToken.toNumber(), 0)
       const newBalance = await token.balanceOf(owner)
+      console.log(newBalance.toNumber())
+      console.log(balance.toNumber())
+      console.log(lockValidityExtended[0].toNumber())
       assert.equal(
         newBalance.toNumber(),
         balance.toNumber() + lockValidityExtended[0].toNumber()
