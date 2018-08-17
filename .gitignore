@@ -42,5 +42,6 @@ jspm_packages/
 
 # built artifacts
 build
+build/
 
 .DS_Store
