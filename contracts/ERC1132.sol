@@ -16,7 +16,7 @@ contract ERC1132 is StandardToken {
 
     /**
      * @dev Holds number & validity of tokens locked for a given reason for
-     *      a given member address
+     *      a specified address
      */
     mapping(address => mapping(bytes32 => lockToken)) public locked;
 
@@ -52,7 +52,6 @@ contract ERC1132 is StandardToken {
         // increaseLockAmount should be used to make any changes
         require(tokensLocked(msg.sender, _reason) == 0);
         require(_amount != 0);
-        //require(_amount <= balances[msg.sender]); SafeMath.sub will throw.
         if (locked[msg.sender][_reason].amount == 0)
             lockReason[msg.sender].push(_reason);
         balances[msg.sender] = balances[msg.sender].sub(_amount);
@@ -146,8 +145,8 @@ contract ERC1132 is StandardToken {
 
     /**
      * @dev Returns unlockable tokens for a specified address for a specified reason
-     * @param _of The address whose tokens are locked
-     * @param _reason The reason to query the lock tokens for
+     * @param _of The address to query the the unlockable token count of
+     * @param _reason The reason to query the unlockable tokens for
      */
     function tokensUnlockable(address _of, bytes32 _reason)
         public
@@ -159,8 +158,8 @@ contract ERC1132 is StandardToken {
     }
 
     /**
-     * @dev Unlocks the locked tokens
-     * @param _of Address of person, claiming back the tokens
+     * @dev Unlocks the unlockable tokens of a specified address
+     * @param _of Address of user, claiming back unlockable tokens
      */
     function unlock(address _of)
         public
@@ -182,8 +181,8 @@ contract ERC1132 is StandardToken {
     }
 
     /**
-     * @dev gets unlockable tokens of a person
-     * @param _of Address of person, claiming back the tokens
+     * @dev Gets the unlockable tokens of a specified address
+     * @param _of The address to query the the unlockable token count of
      */
     function getUnlockableTokens(address _of)
         public
