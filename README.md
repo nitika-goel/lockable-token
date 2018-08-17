@@ -20,13 +20,28 @@ function lock(bytes32 _reason, uint256 _amount, uint256 _time) public returns (b
 ### Fetching number of tokens locked under each utility
 ```
 /**
-  * @dev Returns tokens locked for a specified address, purpose and time
-  * @param _of The address to query the lock tokens of
+  * @dev Returns tokens locked for a specified address for a
+  *      specified reason
+  *
+  * @param _of The address whose tokens are locked
+  * @param _reason The reason to query the lock tokens for
+  */
+   tokensLocked(address _of, bytes32 _reason) view returns (uint256 amount)
+```
+
+### Fetching number of tokens locked under each utility at a future timestamp
+```
+/**
+  * @dev Returns tokens locked for a specified address for a
+  *      specified reason at a specific time
+  *
+  * @param _of The address whose tokens are locked
   * @param _reason The reason to query the lock tokens for
   * @param _time The timestamp to query the lock tokens for
-  **/
-   function tokensLocked(address _of, bytes32 _reason, uint256 _time) view returns (uint256 amount)
+  */
+  function tokensLockedAtTime(address _of, bytes32 _reason, uint256 _time) public view returns (uint256 amount)
 ```
+
 ### Fetching number of tokens held by an address
 ```
 /**
@@ -35,6 +50,7 @@ function lock(bytes32 _reason, uint256 _amount, uint256 _time) public returns (b
   */
 function totalBalanceOf(address _of)  view returns (uint256 amount)
 ```
+
 ### Extending lock period
 ```
 /**
@@ -44,6 +60,7 @@ function totalBalanceOf(address _of)  view returns (uint256 amount)
   */
   function extendLock(bytes32 _reason, uint256 _time) public returns (bool)
 ```
+
 ### Increasing number of tokens locked
 ```
 /**
@@ -53,8 +70,38 @@ function totalBalanceOf(address _of)  view returns (uint256 amount)
   */
   function increaseLockAmount(bytes32 _reason, uint256 _amount) public returns (bool)
 ```
+### Fetching number of unlockable tokens under each utility
+```
+/**
+  * @dev Returns unlockable tokens for a specified address for a specified reason
+  * @param _of The address to query the the unlockable token count of
+  * @param _reason The reason to query the unlockable tokens for
+  */
+  function tokensUnlockable(address _of, bytes32 _reason) public view returns (uint256 amount)
+ ```    
+### Fetching number of unlockable tokens
+```
+/**
+  * @dev Gets the unlockable tokens of a specified address
+  * @param _of The address to query the the unlockable token count of
+  */
+  function getUnlockableTokens(address _of) public view returns (uint256 unlockableTokens)
+```
+### Unlocking tokens
+```
+/**
+  * @dev Unlocks the unlockable tokens of a specified address
+  * @param _of Address of user, claiming back unlockable tokens
+  */
+  function unlock(address _of) public returns (uint256 unlockableTokens)
+```
+
+
 ### Lock event recorded in the token contract
 `event Lock(address indexed _of, uint256 indexed _reason, uint256 _amount, uint256 _validity)`
+
+### Unlock event recorded in the token contract
+`event Unlock(address indexed _of, uint256 indexed _reason, uint256 _amount)`
 
 
 ## Development
