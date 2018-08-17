@@ -121,8 +121,8 @@ contract ERC1132 is StandardToken {
         public
         returns (bool)
     {
-        require(tokensLockedAtTime(msg.sender, _reason, block.timestamp) > 0);
-        locked[msg.sender][_reason].validity += _time;
+        require(tokensLocked(msg.sender, _reason) > 0);
+        locked[msg.sender][_reason].validity = locked[msg.sender][_reason].validity.add(_time);
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
         return true;
     }
@@ -136,10 +136,10 @@ contract ERC1132 is StandardToken {
         public
         returns (bool)
     {
-        require(tokensLockedAtTime(msg.sender, _reason, block.timestamp) > 0);
+        require(tokensLocked(msg.sender, _reason) > 0);
         balances[msg.sender] = balances[msg.sender].sub(_amount);
         balances[address(this)] = balances[address(this)].add(_amount);
-        locked[msg.sender][_reason].amount += _amount;
+        locked[msg.sender][_reason].amount = locked[msg.sender][_reason].amount.add(_amount);
         emit Lock(msg.sender, _reason, locked[msg.sender][_reason].amount, locked[msg.sender][_reason].validity);
         return true;
     }
@@ -170,7 +170,7 @@ contract ERC1132 is StandardToken {
         for (uint256 i = 0; i < lockReason[_of].length; i++) {
             lockedTokens = tokensUnlockable(_of, lockReason[_of][i]);
             if (lockedTokens > 0) {
-                unlockableTokens += lockedTokens;
+                unlockableTokens = unlockableTokens.add(lockedTokens);
                 locked[_of][lockReason[_of][i]].claimed = true;
                 emit Unlocked(_of, lockReason[_of][i], lockedTokens);
             }
@@ -191,7 +191,7 @@ contract ERC1132 is StandardToken {
         returns (uint256 unlockableTokens)
     {
         for (uint256 i = 0; i < lockReason[_of].length; i++) {
-            unlockableTokens += tokensUnlockable(_of, lockReason[_of][i]);
+            unlockableTokens = unlockableTokens.add(tokensUnlockable(_of, lockReason[_of][i]));
         }  
     }
 }
