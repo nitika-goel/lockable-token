@@ -2,6 +2,7 @@ const LockableToken = artifacts.require('./LockableToken.sol')
 const assertThrows = require('./utils/assertThrows')
 const assertExpectedArguments = require('./utils/assertExpectedArguments')
 const { assertRevert } = require('./utils/assertRevert')
+const { timeTravel } = require('./utils/timeTravel')
 
 contract('LockableToken', ([owner, receiver, spender]) => {
   const supply = 1000
@@ -12,6 +13,35 @@ contract('LockableToken', ([owner, receiver, spender]) => {
   const lockTimestamp = Number(new Date()) / 1000
   const approveAmount = 10
   const nullAddress = 0x0000000000000000000000000000000000000000
+  const increaseTime = function(duration) {
+    // const increaseTime = function(duration) {
+    const id = Date.now()
+
+    return new Promise((resolve, reject) => {
+      web3.currentProvider.sendAsync(
+        {
+          jsonrpc: '2.0',
+          method: 'evm_increaseTime',
+          params: [duration],
+          id: id
+        },
+        err1 => {
+          if (err1) return reject(err1)
+
+          web3.currentProvider.sendAsync(
+            {
+              jsonrpc: '2.0',
+              method: 'evm_mine',
+              id: id + 1
+            },
+            (err2, res) => {
+              return err2 ? reject(err2) : resolve(res)
+            }
+          )
+        }
+      )
+    })
+  }
 
   context('given invalid params', () => {
     it('error if not supplied any params', () =>
@@ -51,13 +81,9 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       const totalBalance = await token.totalBalanceOf(owner)
       assert.equal(balance.toNumber(), origBalance.toNumber() - lockedAmount)
       assert.equal(totalBalance.toNumber(), origBalance.toNumber())
-      var actualLockedAmount = await token.tokensLocked(
-        owner,
-        lockReason,
-        currentTimestamp
-      )
+      var actualLockedAmount = await token.tokensLocked(owner, lockReason)
       assert.equal(lockedAmount, actualLockedAmount.toNumber())
-      actualLockedAmount = await token.tokensLocked(
+      actualLockedAmount = await token.tokensLockedAtTime(
         owner,
         lockReason,
         currentTimestamp + lockPeriod + 1
@@ -85,7 +111,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
     })
 
     it('can extend lock period for an existing lock', async () => {
-      await token.tokensLocked(owner, lockReason, lockTimestamp)
+      await token.tokensLocked(owner, lockReason)
       const lockValidityOrig = await token.locked(owner, lockReason)
       await token.extendLock(lockReason, lockPeriod)
       const lockValidityExtended = await token.locked(owner, lockReason)
@@ -98,17 +124,9 @@ contract('LockableToken', ([owner, receiver, spender]) => {
     })
 
     it('can increase the number of tokens locked', async () => {
-      const actualLockedAmount = await token.tokensLocked(
-        owner,
-        lockReason,
-        lockTimestamp
-      )
+      const actualLockedAmount = await token.tokensLocked(owner, lockReason)
       await token.increaseLockAmount(lockReason, lockedAmount)
-      const increasedLockAmount = await token.tokensLocked(
-        owner,
-        lockReason,
-        lockTimestamp
-      )
+      const increasedLockAmount = await token.tokensLocked(owner, lockReason)
       assert.equal(
         increasedLockAmount.toNumber(),
         actualLockedAmount.toNumber() + lockedAmount
@@ -172,6 +190,31 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       assert.equal(logs[0].args.from, owner)
       assert.equal(logs[0].args.to, receiver)
       assert(logs[0].args.value.eq(balance))
+    })
+
+    it('can unLockTokens', async () => {
+      const lockValidityExtended = await token.locked(owner, lockReason)
+      const balance = await token.balanceOf(owner)
+      let unlockableToken = await token.getUnlockableTokens(owner)
+      await increaseTime(
+        (lockValidityExtended[1].toNumber() - lockTimestamp) * 2
+      )
+      unlockableToken = await token.getUnlockableTokens(owner)
+      assert.equal(
+        unlockableToken.toNumber(),
+        lockValidityExtended[0].toNumber()
+      )
+      await token.unlock(owner)
+      unlockableToken = await token.getUnlockableTokens(owner)
+      assert.equal(unlockableToken.toNumber(), 0)
+      const newBalance = await token.balanceOf(owner)
+      console.log(newBalance.toNumber())
+      console.log(balance.toNumber())
+      console.log(lockValidityExtended[0].toNumber())
+      assert.equal(
+        newBalance.toNumber(),
+        balance.toNumber() + lockValidityExtended[0].toNumber()
+      )
     })
   })
 })
