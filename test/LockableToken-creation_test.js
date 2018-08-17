@@ -12,31 +12,20 @@ contract('LockableToken', ([owner, receiver, spender]) => {
   const approveAmount = 10;
   const nullAddress = 0x0000000000000000000000000000000000000000;
   const increaseTime = function(duration) {
-    const id = Date.now();
-
-    return new Promise((resolve, reject) => {
-      web3.currentProvider.sendAsync(
-        {
+    web3.currentProvider.sendAsync({
+      jsonrpc: '2.0',
+      method: 'evm_increaseTime',
+      params: [duration],
+      id: lockTimestamp,
+    }, (err, resp) => {
+      if (!err) {
+        web3.currentProvider.send({
           jsonrpc: '2.0',
-          method: 'evm_increaseTime',
-          params: [duration],
-          id: id,
-        },
-        (err1) => {
-          if (err1) return reject(err1);
-
-          web3.currentProvider.sendAsync(
-            {
-              jsonrpc: '2.0',
-              method: 'evm_mine',
-              id: id + 1,
-            },
-            (err2, res) => {
-              return err2 ? reject(err2) : resolve(res);
-            }
-          );
-        }
-      );
+          method: 'evm_mine',
+          params: [],
+          id: lockTimestamp + 1,
+        });
+      }
     });
   };
 
@@ -192,8 +181,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
     it('can unLockTokens', async () => {
       const lockValidityExtended = await token.locked(owner, lockReason);
       const balance = await token.balanceOf(owner);
-      let unlockableToken = await token.getUnlockableTokens(owner);
-      await increaseTime(lockValidityExtended[1].toNumber() + 3600);
+      await increaseTime((lockValidityExtended[1].toNumber() + 60) - lockTimestamp);
       unlockableToken = await token.getUnlockableTokens(owner);
       assert.equal(
         unlockableToken.toNumber(),
