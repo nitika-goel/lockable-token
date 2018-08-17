@@ -30,7 +30,7 @@ contract ERC1132 is StandardToken {
     /**
      * @dev Records data of all the tokens unlocked
      */
-    event Unlocked(
+    event Unlock(
         address indexed _of,
         bytes32 indexed _reason,
         uint256 _amount
@@ -171,7 +171,7 @@ contract ERC1132 is StandardToken {
             if (lockedTokens > 0) {
                 unlockableTokens = unlockableTokens.add(lockedTokens);
                 locked[_of][lockReason[_of][i]].claimed = true;
-                emit Unlocked(_of, lockReason[_of][i], lockedTokens);
+                emit Unlock(_of, lockReason[_of][i], lockedTokens);
             }
         }  
         if(unlockableTokens > 0) {
