@@ -8,7 +8,8 @@ contract('LockableToken', ([owner, receiver, spender]) => {
   const lockReason2 = 'CLAIM';
   const lockedAmount = 200;
   const lockPeriod = 1000;
-  const lockTimestamp = Number(new Date()) / 1000;
+  let blockNumber = web3.eth.blockNumber;
+  const lockTimestamp = web3.eth.getBlock(blockNumber).timestamp;
   const approveAmount = 10;
   const nullAddress = 0x0000000000000000000000000000000000000000;
   const increaseTime = function(duration) {
@@ -61,7 +62,8 @@ contract('LockableToken', ([owner, receiver, spender]) => {
 
     it('reduces locked tokens from transferable balance', async () => {
       const origBalance = await token.balanceOf(owner);
-      const currentTimestamp = Number(new Date()) / 1000;
+      blockNumber = await web3.eth.blockNumber;
+      const newLockTimestamp = await web3.eth.getBlock(blockNumber).timestamp;
       await token.lock(lockReason, lockedAmount, lockPeriod);
       const balance = await token.balanceOf(owner);
       const totalBalance = await token.totalBalanceOf(owner);
@@ -72,7 +74,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       actualLockedAmount = await token.tokensLockedAtTime(
         owner,
         lockReason,
-        currentTimestamp + lockPeriod + 1
+        newLockTimestamp + lockPeriod + 1
       );
       assert.equal(0, actualLockedAmount.toNumber());
 
