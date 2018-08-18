@@ -60,6 +60,31 @@ contract ERC1132 is StandardToken {
         emit Lock(msg.sender, _reason, _amount, validUntil);
         return true;
     }
+    
+    /**
+     * @dev Transfers and Locks a specified amount of tokens,
+     *      for a specified reason and time
+     * @param _to adress to which tokens are to be transfered
+     * @param _reason The reason to lock tokens
+     * @param _amount Number of tokens to be transfered and locked
+     * @param _time Lock time in seconds
+     */
+    function transferWithLock(address _to, bytes32 _reason, uint256 _amount, uint256 _time)
+        public
+        returns (bool)
+    {
+        uint256 validUntil = block.timestamp.add(_time);
+        require(tokensLocked(_to, _reason) == 0);
+        require(_amount != 0);
+        if (locked[_to][_reason].amount == 0)
+            lockReason[_to].push(_reason);
+        balances[msg.sender] = balances[msg.sender].sub(_amount);
+        balances[address(this)] = balances[address(this)].add(_amount);
+        locked[_to][_reason] = lockToken(_amount, validUntil, false);
+        emit Transfer(msg.sender, _to, _amount);
+        emit Lock(msg.sender, _reason, _amount, validUntil);
+        return true;
+    }
 
     /**
      * @dev Returns tokens locked for a specified address for a
