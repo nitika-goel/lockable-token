@@ -198,5 +198,15 @@ contract('LockableToken', ([owner, receiver, spender]) => {
         balance.toNumber() + lockValidityExtended[0].toNumber()
       );
     });
+    
+    it('can transferWithLock', async () => {
+      const ownerBalance = (await token.balanceOf(owner)).toNumber();
+      const receiverBalance = (await token.balanceOf(receiver)).toNumber();
+      await token.transferWithLock(receiver, lockReason3, ownerBalance, lockPeriod);
+      const locked = await token.locked(receiver, lockReason3);
+      assert.equal((await token.balanceOf(owner)).toNumber(), 0);
+      assert.equal((await token.balanceOf(receiver)).toNumber(), receiverBalance);
+      assert.equal(locked[0].toNumber(), ownerBalance);
+    });
   });
 });
