@@ -6,6 +6,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
   const supply = 1000;
   const lockReason = 'GOV';
   const lockReason2 = 'CLAIM';
+  const lockReason3 = 'VESTED';
   const lockedAmount = 200;
   const lockPeriod = 1000;
   let blockNumber = web3.eth.blockNumber;
