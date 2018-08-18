@@ -1,15 +1,25 @@
-sudo: required
 dist: trusty
+sudo: required
 language: node_js
+
 node_js:
-  - '8.11.3'
+  - "8"
+
 install:
   - npm install -g truffle
-  - npm install
-script:
-  - npm run test:cov
-before_script:
-  - testrpc > /dev/null &
-  - sleep 5
-after_script:
-  - npm run coverage && cat coverage/lcov.info | coveralls
+  - npm install -g ganache-cli
+  - npm install -g coveralls
+  - npm install solidity-coverage
+
+matrix:
+  fast_finish: true
+  allow_failures:
+    - env: 'TASK=coverage'
+  
+jobs:
+  include:
+    - stage: compile
+      script: truffle compile
+    - stage: test and coverage
+      env: 'TASK=coverage'
+      script: npm run coverage && cat coverage/lcov.info | coveralls
