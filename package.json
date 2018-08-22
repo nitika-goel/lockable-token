@@ -32,7 +32,7 @@
   },
   "scripts": {
     "precommit": "lint-staged",
-    "prettier": "prettier --single-quote --no-semi --write '**/*.{js,json}'",
+    "prettier": "prettier --single-quote --write '**/*.{js,json}'",
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "test": "truffle test",
     "test:cov": "solidity-coverage",
@@ -42,7 +42,7 @@
   },
   "lint-staged": {
     "**/*.{js,json}": [
-      "prettier --single-quote --no-semi --write",
+      "prettier --single-quote --write",
       "git add"
     ]
   },
