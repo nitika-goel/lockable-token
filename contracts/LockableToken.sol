@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import './openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
+import 'openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
 import './ERC1132.sol';
 
 
@@ -15,9 +15,11 @@ contract LockableToken is ERC1132, StandardToken {
 
 	/**
 	 * @dev constructor to mint initial tokens
+     * This will need to be updated to use _mint once openzepplin updates their npm package.
 	 */
 	constructor(uint256 _supply) public {
-        _mint(msg.sender, _supply);
+        totalSupply_ = _supply;
+        balances[msg.sender] = _supply;
     }
 
     /**
