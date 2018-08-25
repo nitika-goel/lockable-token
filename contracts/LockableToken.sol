@@ -43,7 +43,7 @@ contract LockableToken is ERC1132, StandardToken {
         if (locked[msg.sender][_reason].amount == 0)
             lockReason[msg.sender].push(_reason);
 
-        require(transfer(address(this), _amount), transferFailed);
+        transfer(address(this), _amount);
 
         locked[msg.sender][_reason] = lockToken(_amount, validUntil, false);
 
@@ -71,7 +71,7 @@ contract LockableToken is ERC1132, StandardToken {
         if (locked[_to][_reason].amount == 0)
             lockReason[_to].push(_reason);
 
-        require(transfer(address(this), _amount), transferFailed);
+        transfer(address(this), _amount);
 
         locked[_to][_reason] = lockToken(_amount, validUntil, false);
         
@@ -197,7 +197,7 @@ contract LockableToken is ERC1132, StandardToken {
         }  
 
         if(unlockableTokens > 0)
-        	require(this.transfer(_of, unlockableTokens), transferFailed);
+        	this.transfer(_of, unlockableTokens);
     }
 
     /**

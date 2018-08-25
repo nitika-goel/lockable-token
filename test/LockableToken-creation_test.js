@@ -207,24 +207,64 @@ contract('LockableToken', ([owner, receiver, spender]) => {
         newBalance.toNumber(),
         balance.toNumber() + tokensLocked.toNumber()
       );
+      await token.unlock(owner);
+      const newNewBalance = await token.balanceOf(owner);
+      assert.equal(newBalance.toNumber(), newNewBalance.toNumber());
+    });
+
+    it('should allow to lock token again', async () => {
+      token.lock('0x41', 1, 0);
+      await token.unlock(owner);
+      token.lock('0x41', 1, 0);
     });
 
     it('can transferWithLock', async () => {
       const ownerBalance = (await token.balanceOf(owner)).toNumber();
       const receiverBalance = (await token.balanceOf(receiver)).toNumber();
-      await token.transferWithLock(
-        receiver,
-        lockReason3,
-        ownerBalance,
-        lockPeriod
+      await token.transferWithLock(receiver, lockReason3, ownerBalance - 1, 0);
+      await assertRevert(
+        token.transferWithLock(receiver, lockReason3, ownerBalance, lockPeriod)
       );
       const locked = await token.locked(receiver, lockReason3);
-      assert.equal((await token.balanceOf(owner)).toNumber(), 0);
+      assert.equal((await token.balanceOf(owner)).toNumber(), 1);
       assert.equal(
         (await token.balanceOf(receiver)).toNumber(),
         receiverBalance
       );
-      assert.equal(locked[0].toNumber(), ownerBalance);
+      assert.equal(locked[0].toNumber(), ownerBalance - 1);
+    });
+
+    it('should not allow 0 lock amount', async () => {
+      await assertRevert(token.lock('0x41', 0, 2 * lockTimestamp));
+      await assertRevert(
+        token.transferWithLock(receiver, '0x414141', 0, lockPeriod)
+      );
+    });
+
+    it('should show 0 lock amount for unknown reasons', async () => {
+      const actualLockedAmount = await token.tokensLocked(owner, '0x4141');
+      assert.equal(actualLockedAmount.toNumber(), 0);
+    });
+
+    it('should not allow to increase lock amount by more than balance', async () => {
+      await assertRevert(
+        token.increaseLockAmount(
+          lockReason,
+          (await token.balanceOf(owner)).toNumber() + 1
+        )
+      );
+    });
+
+    it('should not allow to transfer and lock more than balance', async () => {
+      const ownerBalance = (await token.balanceOf(owner)).toNumber();
+      await assertRevert(
+        token.transferWithLock(receiver, '0x4142', ownerBalance + 1, lockPeriod)
+      );
+    });
+
+    it('should allow transfer with lock againa fter claiming', async () => {
+      await token.unlock(receiver);
+      await token.transferWithLock(receiver, lockReason3, 1, 0);
     });
   });
 });
