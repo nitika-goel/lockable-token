@@ -235,7 +235,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
     });
 
     it('should not allow 0 lock amount', async () => {
-      await assertRevert(token.lock('0x41', 0, 2 * lockTimestamp));
+      await assertRevert(token.lock('0x414141', 0, lockTimestamp));
       await assertRevert(
         token.transferWithLock(receiver, '0x414141', 0, lockPeriod)
       );

@@ -155,7 +155,7 @@ contract LockableToken is ERC1132, StandardToken {
         returns (bool)
     {
         require(tokensLocked(msg.sender, _reason) > 0, notLocked);
-        require(transfer(address(this), _amount), transferFailed);
+        transfer(address(this), _amount);
 
         locked[msg.sender][_reason].amount = locked[msg.sender][_reason].amount.add(_amount);
 
