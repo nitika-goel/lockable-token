@@ -8,10 +8,9 @@ contract LockableToken is ERC1132, StandardToken {
 	/**
 	 * @dev Error messages for require statements
 	 */
-	string constant alreadyLocked = 'Tokens already locked';
-	string constant notLocked = 'No tokens locked';
-	string constant amountZero = 'Amount can not be 0';
-	string constant transferFailed = 'Transfer Failed';
+	string internal constant ALREADY_LOCKED = "Tokens already locked";
+    string internal constant NOT_LOCKED = "No tokens locked";
+    string internal constant AMOUNT_ZERO = "Amount can not be 0";
 
 	/**
 	 * @dev constructor to mint initial tokens
@@ -33,12 +32,12 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        uint256 validUntil = block.timestamp.add(_time);
+        uint256 validUntil = now.add(_time); //solhint-disable-line
 
         // If tokens are already locked, then functions extendLock or
         // increaseLockAmount should be used to make any changes
-        require(tokensLocked(msg.sender, _reason) == 0, alreadyLocked);
-        require(_amount != 0, amountZero);
+        require(tokensLocked(msg.sender, _reason) == 0, ALREADY_LOCKED);
+        require(_amount != 0, AMOUNT_ZERO);
 
         if (locked[msg.sender][_reason].amount == 0)
             lockReason[msg.sender].push(_reason);
@@ -63,10 +62,10 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        uint256 validUntil = block.timestamp.add(_time);
+        uint256 validUntil = now.add(_time); //solhint-disable-line
 
-        require(tokensLocked(_to, _reason) == 0, alreadyLocked);
-        require(_amount != 0, amountZero);
+        require(tokensLocked(_to, _reason) == 0, ALREADY_LOCKED);
+        require(_amount != 0, AMOUNT_ZERO);
 
         if (locked[_to][_reason].amount == 0)
             lockReason[_to].push(_reason);
@@ -137,7 +136,7 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        require(tokensLocked(msg.sender, _reason) > 0, notLocked);
+        require(tokensLocked(msg.sender, _reason) > 0, NOT_LOCKED);
 
         locked[msg.sender][_reason].validity = locked[msg.sender][_reason].validity.add(_time);
 
@@ -154,7 +153,7 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        require(tokensLocked(msg.sender, _reason) > 0, notLocked);
+        require(tokensLocked(msg.sender, _reason) > 0, NOT_LOCKED);
         transfer(address(this), _amount);
 
         locked[msg.sender][_reason].amount = locked[msg.sender][_reason].amount.add(_amount);
@@ -173,7 +172,7 @@ contract LockableToken is ERC1132, StandardToken {
         view
         returns (uint256 amount)
     {
-        if (locked[_of][_reason].validity <= now && !locked[_of][_reason].claimed)
+        if (locked[_of][_reason].validity <= now && !locked[_of][_reason].claimed) //solhint-disable-line
             amount = locked[_of][_reason].amount;
     }
 
@@ -196,7 +195,7 @@ contract LockableToken is ERC1132, StandardToken {
             }
         }  
 
-        if(unlockableTokens > 0)
+        if (unlockableTokens > 0)
         	this.transfer(_of, unlockableTokens);
     }
 

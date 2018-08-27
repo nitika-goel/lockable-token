@@ -30,7 +30,7 @@
     "solidity-coverage": "^0.5.4"
   },
   "scripts": {
-    "precommit": "lint-staged",
+    "precommit": "lint-staged && solhint \"contracts/*.sol\"",
     "prettier": "prettier --single-quote --write '**/*.{js,json}'",
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "test": "truffle test",
