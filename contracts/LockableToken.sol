@@ -1,23 +1,22 @@
 pragma solidity 0.4.24;
 
-import 'openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
-import './ERC1132.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
+import "./ERC1132.sol";
 
 
 contract LockableToken is ERC1132, StandardToken {
-	/**
-	 * @dev Error messages for require statements
-	 */
-	string constant alreadyLocked = 'Tokens already locked';
-	string constant notLocked = 'No tokens locked';
-	string constant amountZero = 'Amount can not be 0';
-	string constant transferFailed = 'Transfer Failed';
+    /**
+     * @dev Error messages for require statements
+     */
+    string internal constant ALREADY_LOCKED = "Tokens already locked";
+    string internal constant NOT_LOCKED = "No tokens locked";
+    string internal constant AMOUNT_ZERO = "Amount can not be 0";
 
-	/**
-	 * @dev constructor to mint initial tokens
+    /**
+     * @dev constructor to mint initial tokens
      * This will need to be updated to use _mint once openzepplin updates their npm package.
-	 */
-	constructor(uint256 _supply) public {
+     */
+    constructor(uint256 _supply) public {
         totalSupply_ = _supply;
         balances[msg.sender] = _supply;
     }
@@ -33,15 +32,14 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        uint256 validUntil = block.timestamp.add(_time);
+        uint256 validUntil = now.add(_time);
 
         // If tokens are already locked, then functions extendLock or
         // increaseLockAmount should be used to make any changes
-        require(tokensLocked(msg.sender, _reason) == 0, alreadyLocked);
-        require(_amount != 0, amountZero);
+        require(tokensLocked(msg.sender, _reason) == 0, ALREADY_LOCKED);
+        require(_amount != 0, AMOUNT_ZERO);
 
-        if (locked[msg.sender][_reason].amount == 0)
-            lockReason[msg.sender].push(_reason);
+        lockReason[msg.sender].push(_reason);
 
         transfer(address(this), _amount);
 
@@ -63,10 +61,10 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        uint256 validUntil = block.timestamp.add(_time);
+        uint256 validUntil = now.add(_time);
 
-        require(tokensLocked(_to, _reason) == 0, alreadyLocked);
-        require(_amount != 0, amountZero);
+        require(tokensLocked(_to, _reason) == 0, ALREADY_LOCKED);
+        require(_amount != 0, AMOUNT_ZERO);
 
         lockReason[_to].push(_reason);
 
@@ -119,7 +117,7 @@ contract LockableToken is ERC1132, StandardToken {
         view
         returns (uint256 amount)
     {
-    	amount = balanceOf(_of);
+        amount = balanceOf(_of);
 
         for (uint256 i = 0; i < lockReason[_of].length; i++) {
             amount = amount.add(tokensLocked(_of, lockReason[_of][i]));
@@ -135,7 +133,7 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        require(tokensLocked(msg.sender, _reason) > 0, notLocked);
+        require(tokensLocked(msg.sender, _reason) > 0, NOT_LOCKED);
 
         locked[msg.sender][_reason].validity = locked[msg.sender][_reason].validity.add(_time);
 
@@ -152,7 +150,7 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
-        require(tokensLocked(msg.sender, _reason) > 0, notLocked);
+        require(tokensLocked(msg.sender, _reason) > 0, NOT_LOCKED);
         transfer(address(this), _amount);
 
         locked[msg.sender][_reason].amount = locked[msg.sender][_reason].amount.add(_amount);
@@ -185,19 +183,25 @@ contract LockableToken is ERC1132, StandardToken {
     {
         uint256 lockedTokens;
         uint256 unlockableTokens;
-
-        for (uint256 i = 0; i < lockReason[_of].length; i++) {
+        for (uint256 i = 0; i < lockReason[_of].length;) {
             lockedTokens = tokensUnlockable(_of, lockReason[_of][i]);
             if (lockedTokens > 0) {
                 unlockableTokens = unlockableTokens.add(lockedTokens);
                 delete locked[_of][lockReason[_of][i]];
-                delete lockReason[_of][i];
+                lockReason[_of][i] = lockReason[_of][lockReason[_of].length - 1];
+                if (lockReason[_of].length == 1) {
+                    lockReason[_of].length--;
+                    break;
+                }
+                lockReason[_of].length--;
                 emit Unlock(_of, lockReason[_of][i], lockedTokens);
+            } else {
+                i++;
             }
         }  
 
-        if(unlockableTokens > 0)
-        	this.transfer(_of, unlockableTokens);
+        if (unlockableTokens > 0)
+            this.transfer(_of, unlockableTokens);
 
         return true;
     }
