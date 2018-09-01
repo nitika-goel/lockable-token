@@ -213,6 +213,8 @@ contract('LockableToken', ([owner, receiver, spender]) => {
 
     it('should allow to lock token again', async () => {
       await token.lock(lockReason, 1, 0);
+      const tokensUnlockable = await token.tokensUnlockable(owner, lockReason);
+      assert.equal(tokensUnlockable.toNumber(), 1);
       await token.unlock(owner);
       await token.lock('0x41', 1, 0);
     });
