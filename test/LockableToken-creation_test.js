@@ -212,22 +212,11 @@ contract('LockableToken', ([owner, receiver, spender]) => {
     });
 
     it('should allow to lock token again', async () => {
-      const receipt = await token.lock(lockReason, 1, 0);
-      const receipt1 = await token.lock('0x42', 1, 0);
-      const receipt2 = await token.lock('0x41', 1, 0);
+      await token.lock(lockReason, 1, 0);
       const tokensUnlockable = await token.tokensUnlockable(owner, lockReason);
       assert.equal(tokensUnlockable.toNumber(), 1);
-      const receipt3 = await token.unlock(owner);
-      console.log(
-        `GasUsed for first ever locking by user: ${receipt.receipt.gasUsed}`
-      );
-      console.log(
-        `GasUsed for new locking reason: ${receipt1.receipt.gasUsed}`
-      );
-      console.log(
-        `GasUsed for new locking reason: ${receipt2.receipt.gasUsed}`
-      );
-      console.log(`GasUsed for unlocking: ${receipt3.receipt.gasUsed}`);
+      await token.unlock(owner);
+      await token.lock('0x41', 1, 0);
     });
 
     it('can transferWithLock', async () => {
