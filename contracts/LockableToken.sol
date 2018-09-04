@@ -181,22 +181,20 @@ contract LockableToken is ERC1132, StandardToken {
         public
         returns (bool)
     {
+        uint256 lockedTokens;
         uint256 unlockableTokens;
-        for (uint256 i = 0; i < lockReason[_of].length;) { 
-            lockToken memory lt = locked[_of][lockReason[_of][i]];
-            if (lt.validity <= now) {
-                unlockableTokens = unlockableTokens.add(lt.amount);
-                emit Unlock(_of, lockReason[_of][i], lt.amount);
-                delete locked[_of][lockReason[_of][i]];
-                if (lockReason[_of].length == 1) {
-                    lockReason[_of].length--;
-                    break;
-                }
-                lockReason[_of][i] = lockReason[_of][lockReason[_of].length - 1];
+        
+        for (uint256 i = 0; i < lockReason[_of].length; i++) { 
+            lockedTokens = locked[_of][lockReason[_of][i]].amount;
+            emit Unlock(_of, lockReason[_of][i], lockedTokens);
+            unlockableTokens = unlockableTokens.add(lockedTokens);
+            delete locked[_of][lockReason[_of][i]];
+            lockReason[_of][i] = lockReason[_of][lockReason[_of].length - 1];
+            if (lockReason[_of].length == 1) {
                 lockReason[_of].length--;
-            } else {
-                i++;
-            } 
+                break;
+            }
+            lockReason[_of].length--;
         }  
 
         this.transfer(_of, unlockableTokens);
