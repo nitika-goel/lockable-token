@@ -80,8 +80,6 @@ contract('LockableToken', ([owner, receiver, spender]) => {
         lockReason,
         newLockTimestamp + lockPeriod + 1
       );
-      const tokensUnlockable = await token.tokensUnlockable(owner, lockReason);
-      assert.equal(tokensUnlockable.toNumber(), 0);
       assert.equal(0, actualLockedAmount.toNumber());
 
       const transferAmount = 1;
@@ -188,7 +186,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       assert(logs[0].args.value.eq(balance));
     });
 
-    it('can unlock tokens', async () => {
+    it('can unLockTokens', async () => {
       const lockValidityExtended = await token.locked(owner, lockReason);
       const balance = await token.balanceOf(owner);
       const tokensLocked = await token.tokensLockedAtTime(
@@ -209,12 +207,15 @@ contract('LockableToken', ([owner, receiver, spender]) => {
         newBalance.toNumber(),
         balance.toNumber() + tokensLocked.toNumber()
       );
+      await token.unlock(owner);
+      const newNewBalance = await token.balanceOf(owner);
+      assert.equal(newBalance.toNumber(), newNewBalance.toNumber());
     });
 
     it('should allow to lock token again', async () => {
-      await token.lock(lockReason, 1, 0);
+      token.lock('0x41', 1, 0);
       await token.unlock(owner);
-      await token.lock('0x41', 1, 0);
+      token.lock('0x41', 1, 0);
     });
 
     it('can transferWithLock', async () => {
