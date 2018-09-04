@@ -17,6 +17,7 @@ contract ERC1132 {
     struct lockToken {
         uint256 amount;
         uint256 validity;
+        bool claimed;
     }
 
     /**
@@ -111,7 +112,7 @@ contract ERC1132 {
      * @param _of Address of user, claiming back unlockable tokens
      */
     function unlock(address _of)
-        public returns (bool);
+        public returns (uint256 unlockableTokens);
 
     /**
      * @dev Gets the unlockable tokens of a specified address
