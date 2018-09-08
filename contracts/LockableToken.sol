@@ -5,18 +5,19 @@ import './ERC1132.sol';
 
 
 contract LockableToken is ERC1132, StandardToken {
-	/**
-	 * @dev Error messages for require statements
-	 */
-	string internal constant ALREADY_LOCKED = "Tokens already locked";
-    string internal constant NOT_LOCKED = "No tokens locked";
-    string internal constant AMOUNT_ZERO = "Amount can not be 0";
 
-	/**
-	 * @dev constructor to mint initial tokens
-     * This will need to be updated to use _mint once openzepplin updates their npm package.
-	 */
-	constructor(uint256 _supply) public {
+   /**
+    * @dev Error messages for require statements
+    */
+    string internal constant ALREADY_LOCKED = 'Tokens already locked';
+    string internal constant NOT_LOCKED = 'No tokens locked';
+    string internal constant AMOUNT_ZERO = 'Amount can not be 0';
+
+   /**
+    * @dev constructor to mint initial tokens
+    * Shall update to _mint once openzepplin updates their npm package.
+    */
+    constructor(uint256 _supply) public {
         totalSupply_ = _supply;
         balances[msg.sender] = _supply;
     }
@@ -120,7 +121,7 @@ contract LockableToken is ERC1132, StandardToken {
         view
         returns (uint256 amount)
     {
-    	amount = balanceOf(_of);
+        amount = balanceOf(_of);
 
         for (uint256 i = 0; i < lockReason[_of].length; i++) {
             amount = amount.add(tokensLocked(_of, lockReason[_of][i]));
@@ -196,7 +197,7 @@ contract LockableToken is ERC1132, StandardToken {
         }  
 
         if (unlockableTokens > 0)
-        	this.transfer(_of, unlockableTokens);
+            this.transfer(_of, unlockableTokens);
     }
 
     /**

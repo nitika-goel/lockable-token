@@ -262,7 +262,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       );
     });
 
-    it('should allow transfer with lock againa fter claiming', async () => {
+    it('should allow transfer with lock again after claiming', async () => {
       await token.unlock(receiver);
       await token.transferWithLock(receiver, lockReason3, 1, 0);
     });
