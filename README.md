@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/nitika-goel/lockable-token.svg?branch=master)](https://travis-ci.org/nitika-goel/lockable-token) [![Coverage Status](https://coveralls.io/repos/github/nitika-goel/lockable-token/badge.svg?branch=master)](https://coveralls.io/github/nitika-goel/lockable-token?branch=master)
+
 This is a sample contract showcasing the implementation of https://github.com/ethereum/EIPs/issues/1132
 
 ## Summary

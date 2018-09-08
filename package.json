@@ -1,6 +1,6 @@
 {
   "name": "@nitika-goel/lockable-token",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "An interface definition, and reference implementation for the ERC-1132 lockable token.",
   "main": "truffle.js",
   "directories": {
@@ -30,8 +30,8 @@
     "solidity-coverage": "^0.5.4"
   },
   "scripts": {
-    "precommit": "lint-staged",
-    "prettier": "prettier --single-quote --no-semi --write '**/*.{js,json}'",
+    "precommit": "lint-staged && solhint \"contracts/*.sol\"",
+    "prettier": "prettier --single-quote --write '**/*.{js,json}'",
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "test": "truffle test",
     "test:cov": "solidity-coverage",
@@ -41,7 +41,7 @@
   },
   "lint-staged": {
     "**/*.{js,json}": [
-      "prettier --single-quote --no-semi --write",
+      "prettier --single-quote --write",
       "git add"
     ]
   },
@@ -67,6 +67,6 @@
   },
   "homepage": "https://github.com/nitika-goel/lockable-token#readme",
   "dependencies": {
-    "openzeppelin-solidity": "^1.9.0"
+    "openzeppelin-solidity": "^1.12.0"
   }
 }
