@@ -2,8 +2,11 @@ const LockableToken = artifacts.require('./LockableToken.sol');
 const assertExpectedArguments = require('./utils/assertExpectedArguments');
 const { assertRevert } = require('./utils/assertRevert');
 
-contract('LockableToken', ([owner, receiver, spender]) => {
+contract('LockableToken', ([owner, receiver, spender, account2]) => {
   const supply = 1000;
+  const name = 'ERC1132';
+  const symbol = 'E1132';
+  const decimals = 18;
   const lockReason = 'GOV';
   const lockReason2 = 'CLAIM';
   const lockReason3 = 'VESTED';
@@ -36,14 +39,14 @@ contract('LockableToken', ([owner, receiver, spender]) => {
 
   context('given invalid params', () => {
     it('error if not supplied any params', () =>
-      assertExpectedArguments(1)(LockableToken.new()));
+      assertExpectedArguments(4)(LockableToken.new()));
   });
 
   context('given valid params', () => {
     let token;
 
     before(async () => {
-      token = await LockableToken.new(supply);
+      token = await LockableToken.new(supply, name, symbol, decimals);
     });
 
     it('can be created', () => {
@@ -54,14 +57,23 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       const balance = await token.balanceOf(owner);
       const totalBalance = await token.totalBalanceOf(owner);
       const totalSupply = await token.totalSupply();
+      const tokenName = await token.name();
+      const tokenSymbol = await token.symbol();
+      const tokenDecimals = await token.decimals();
+
       assert.equal(balance.toNumber(), supply);
       assert.equal(totalBalance.toNumber(), supply);
       assert.equal(totalSupply.toNumber(), supply);
+      assert.equal(tokenName, name);
+      assert.equal(tokenSymbol, symbol);
+      assert.equal(tokenDecimals.toNumber(), decimals);
+
+      token.transfer(account2, balance / 2, { from: owner });
     });
 
     it('has the right total balance for the contract owner', async () => {
       const balance = await token.totalBalanceOf(owner);
-      assert.equal(balance.toNumber(), supply);
+      assert.equal(balance.toNumber() * 2, supply);
     });
 
     it('reduces locked tokens from transferable balance', async () => {
@@ -197,7 +209,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
       await increaseTime(
         lockValidityExtended[1].toNumber() + 60 - lockTimestamp
       );
-      unlockableToken = await token.getUnlockableTokens(owner);
+      var unlockableToken = await token.getUnlockableTokens(owner);
       assert.equal(unlockableToken.toNumber(), tokensLocked.toNumber());
       await token.unlock(owner);
       unlockableToken = await token.getUnlockableTokens(owner);
@@ -219,19 +231,30 @@ contract('LockableToken', ([owner, receiver, spender]) => {
     });
 
     it('can transferWithLock', async () => {
-      const ownerBalance = (await token.balanceOf(owner)).toNumber();
+      const account2Balance = (await token.balanceOf(account2)).toNumber();
       const receiverBalance = (await token.balanceOf(receiver)).toNumber();
-      await token.transferWithLock(receiver, lockReason3, ownerBalance - 1, 0);
+      await token.transferWithLock(receiver, lockReason3, 1, 180, {
+        from: account2
+      });
       await assertRevert(
-        token.transferWithLock(receiver, lockReason3, ownerBalance, lockPeriod)
+        token.transferWithLock(
+          receiver,
+          lockReason3,
+          account2Balance,
+          lockPeriod,
+          { from: account2 }
+        )
       );
       const locked = await token.locked(receiver, lockReason3);
-      assert.equal((await token.balanceOf(owner)).toNumber(), 1);
       assert.equal(
-        (await token.balanceOf(receiver)).toNumber(),
-        receiverBalance
+        (await token.totalBalanceOf(account2)).toNumber(),
+        account2Balance - 1
       );
-      assert.equal(locked[0].toNumber(), ownerBalance - 1);
+      assert.equal(
+        (await token.totalBalanceOf(receiver)).toNumber(),
+        receiverBalance + 1
+      );
+      assert.equal(locked[0].toNumber(), 1);
     });
 
     it('should not allow 0 lock amount', async () => {
@@ -263,6 +286,7 @@ contract('LockableToken', ([owner, receiver, spender]) => {
     });
 
     it('should allow transfer with lock again after claiming', async () => {
+      await increaseTime(180);
       await token.unlock(receiver);
       await token.transferWithLock(receiver, lockReason3, 1, 0);
     });

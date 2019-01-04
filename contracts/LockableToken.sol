@@ -13,13 +13,20 @@ contract LockableToken is ERC1132, StandardToken {
     string internal constant NOT_LOCKED = 'No tokens locked';
     string internal constant AMOUNT_ZERO = 'Amount can not be 0';
 
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+
    /**
     * @dev constructor to mint initial tokens
     * Shall update to _mint once openzepplin updates their npm package.
     */
-    constructor(uint256 _supply) public {
+    constructor(uint256 _supply, string _name, string _symbol, uint8 _decimals) public {
         totalSupply_ = _supply;
         balances[msg.sender] = _supply;
+        name = _name;
+        symbol = _symbol;
+        decimals = _decimals;
     }
 
     /**

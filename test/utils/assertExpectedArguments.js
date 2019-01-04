@@ -4,13 +4,13 @@
  */
 const assertExpectedArguments = count => async promise => {
   try {
-    await promise
-    assert.fail('Expected error not received')
+    await promise;
+    assert.fail('Expected error not received');
   } catch (error) {
     const expectedArgs =
-      error.message.search(`expected ${count} arguments`) >= 0
-    assert.isTrue(expectedArgs, `Expected error, but got '${error}'`)
+      error.message.search(`expected ${count} arguments`) >= 0;
+    assert.isTrue(expectedArgs, `Expected error, but got '${error}'`);
   }
-}
+};
 
-module.exports = assertExpectedArguments
+module.exports = assertExpectedArguments;
