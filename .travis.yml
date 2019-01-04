@@ -6,7 +6,7 @@ node_js:
   - "8"
 
 install:
-  - npm install -g truffle
+  - npm install -g truffle@4.1.13
   - npm install -g ganache-cli
   - npm install -g coveralls
   - npm install solidity-coverage
